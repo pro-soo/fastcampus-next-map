@@ -1,20 +1,28 @@
-import {StoreApiResponse} from "@/interface";
+import {StoreApiResponse, StoreType} from "@/interface";
 import Image from "next/image";
 import axios from "axios";
-import {useQuery} from "react-query";
+import {useQuery, useInfiniteQuery} from "react-query";
 import Loading from "@/components/Loading";
 import {useRouter} from "next/router";
-import Link from "next/link";
-import {store} from "next/dist/build/output/store";
 import Pagination from "@/components/Pagination";
+import React from "react";
 
 export default function StoreListPage() {
     const router = useRouter();
     const {page = "1"}: any = router.query;
 
-    const {isLoading, isError, data: stores} = useQuery(`stores-${page}`, async () => {
-        const {data} = await axios(`/api/stores?page=${page}`);
-        return data as StoreApiResponse;
+    const fetchStores = async ({ pageParam = 1}) => {
+      const {data} = await axios("/api/stores?page="+pageParam, {
+          params: {
+              limit: 10,
+              page: pageParam,
+          },
+      });
+      return data;
+    };
+
+    const {data: stores, isFetching, fetchNextPage, isFetchingNextPage, hasNextPage, isError, isLoading} = useInfiniteQuery('stores', fetchStores, {
+        getNextPageParam: (lastPage: any) => lastPage.data?.length > 0 ? lastPage.page + 1 : undefined,
     });
 
     if (isError) {
@@ -28,7 +36,11 @@ export default function StoreListPage() {
     return (
         <div className="px-4 md:max-w-4xl mx-auto py-8">
             <ul role="list" className="divide-y divide-gray-100">
-                {isLoading ? (<Loading/>) : (stores?.data?.map((store, index) => (
+                {isLoading ? (<Loading/>) : (stores?.pages?.map((page, index) => (
+                    <React.Fragment key={index}>
+                        {page.data.map((store: StoreType, i)=> (
+
+                        ))}
                     <li className="flex justify-between gap-x-6 py-5" key={index}>
                         <div className="flex gap-x-4">
                             <Image
@@ -53,9 +65,11 @@ export default function StoreListPage() {
                             </div>
                         </div>
                     </li>
+                    </React.Fragment>
                 )))}
             </ul>
             {stores?.totalPage && <Pagination total={stores?.totalPage} page={page}/>}
+            <button type="button" onClick={() => fetchNextPage()}></button>
         </div>
     );
 }
