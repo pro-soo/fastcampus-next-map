@@ -1,14 +1,30 @@
 import {useForm} from "react-hook-form";
 import {CATEGORY_ARR, FOOD_CERTIFY_ARR, STORE_TYPE_ARR} from "@/data/store";
+import {toast} from "react-toastify";
+import axios from "axios";
+import {useRouter} from "next/router";
+import AddressSearch from "@/components/AddressSearch";
+import {StoreType} from "@/interface";
 
 export default function StoreNewPage() {
-    const { register, handleSubmit, formState: {errors},} = useForm();
+    const router = useRouter();
+    const { register, handleSubmit, formState: {errors}, setValue} = useForm<StoreType>();
     return (
         <form className="px-4 md:max-w-4xl mx-auto py-8" onSubmit={handleSubmit(async (data) =>{
             try {
+                const result = await axios.post("/api/stores", data);
 
+                if(result.status === 200){
+                    // 성공
+                    toast.success("맛집을 등록했습니다.");
+                    router.replace(`/stores/${result.data.id}`);
+                } else {
+                    // 실패
+                    toast.error("다시 시도해주세요.");
+                }
             } catch (e){
                 console.log(e);
+                toast.error("데이터 생성 중 문제가 생겼습니다. 다시 시도해주세요.");
             }
         })}>
             <div className="space-y-12">
@@ -76,22 +92,7 @@ export default function StoreNewPage() {
                             </div>
                         </div>
 
-                        <div className="col-span-full">
-                            <label htmlFor="address" className="block text-sm/6 font-medium text-gray-900">
-                                주소 (다음 주소 검색 API)
-                            </label>
-                            <div className="mt-2">
-                                <input
-                                    {...register("address", {required: true})}
-                                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-none -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                                />
-                                {errors?.address?.type === 'required' && (
-                                    <div className="pt-2 text-xs text-red-600">
-                                        필수 입력사항입니다.
-                                    </div>
-                                ) }
-                            </div>
-                        </div>
+                        <AddressSearch setValue={setValue} register={register} errors={errors}/>
 
                         <div className="sm:col-span-2 sm:col-start-1">
                             <label htmlFor="foodCertifyName" className="block text-sm/6 font-medium text-gray-900">
@@ -141,7 +142,10 @@ export default function StoreNewPage() {
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-x-6">
-                <button type="button" className="text-sm/6 font-semibold text-gray-900">
+                <button
+                    type="button"
+                    onClick={()=> router.back()}
+                    className="text-sm/6 font-semibold text-gray-900">
                     뒤로가기
                 </button>
                 <button
